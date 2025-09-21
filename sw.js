@@ -1,5 +1,7 @@
 /* offline-first service worker */
-const CACHE = "kuku-mini-v1";
+// 旧: const CACHE = "kuku-mini-v1";
+const CACHE = "kuku-mini-v2";
+
 const CORE = ["/", "/index.html", "/manifest.webmanifest"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)));
