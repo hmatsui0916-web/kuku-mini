@@ -1,124 +1,150 @@
 <!doctype html>
 <html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>九九ミニ</title>
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#000000" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>html,body{height:100%;background:#fafafa}.tabular-nums{font-variant-numeric:tabular-nums}</style>
-  </head>
-  <body>
-    <div id="app"></div>
-  <script type="module" crossorigin>
-    import { h, render } from "https://esm.sh/preact@10.22.0";
-    import { useEffect, useMemo, useRef, useState } from "https://esm.sh/preact@10.22.0/hooks";
-    import htm from "https://esm.sh/htm@3.1.1/preact";
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>九九ミニ</title>
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#000000" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="apple-touch-icon" href="/icons/icon-192.png" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>html,body{height:100%;background:#fafafa}.tabular-nums{font-variant-numeric:tabular-nums}</style>
 
-      const html=htm.bind(h);
-      const LS="kuku_min_preview_v1";
-      const fmt=(ms)=>`${Math.floor(ms/1000)}.${String(ms%1000).padStart(3,"0")}s`;
-      const pick=(a)=>a[Math.floor(Math.random()*a.length)];
-      function useStopwatch(run,resetKey=0){const[ms,setMs]=useState(0);const acc=useRef(0),raf=useRef(null),start=useRef(null),prev=useRef(resetKey);
-        useEffect(()=>{const reset=prev.current!==resetKey;prev.current=resetKey;if(raf.current){cancelAnimationFrame(raf.current);raf.current=null;}
-          if(reset){acc.current=0;setMs(0);} if(!run){ if(start.current!=null){acc.current+=Math.round(performance.now()-start.current);start.current=null;} return ()=>{};}
-          const t0=performance.now(),base=acc.current;start.current=t0;
-          const tick=()=>{setMs(base+Math.round(performance.now()-t0));raf.current=requestAnimationFrame(tick)};raf.current=requestAnimationFrame(tick);
-          return()=>{if(raf.current)cancelAnimationFrame(raf.current);if(start.current!=null){acc.current=base+Math.round(performance.now()-t0);start.current=null;}}},[run,resetKey]);return ms;}
-      function App(){const[view,setView]=useState("practice"),[all,setAll]=useState(true),[sel,setSel]=useState([]);
-        const avail=useMemo(()=>all||sel.length===0?[1,2,3,4,5,6,7,8,9]:[...sel].sort((a,b)=>a-b),[all,sel]);
-        const[a,setA]=useState(1),[b,setB]=useState(1),[choices,setChoices]=useState([1,2,3,4]);
-        const[running,setRunning]=useState(false),[paused,setPaused]=useState(false),[qKey,setQKey]=useState(0),[inSession,setInSession]=useState(false),[sessionKey,setSessionKey]=useState(0);
-        const qms=useStopwatch(running&&!paused,qKey), totalMs=useStopwatch(inSession&&!paused,sessionKey);
-        const[log,setLog]=useState(()=>{try{const raw=localStorage.getItem(LS);return raw?JSON.parse(raw):[]}catch{return[]}});
-        const save=(rows)=>{try{localStorage.setItem(LS,JSON.stringify(rows.slice(0,5000)))}catch{}};
-        const nextTimer=useRef(null),cancelNext=()=>{if(nextTimer.current!=null){clearTimeout(nextTimer.current);nextTimer.current=null;}},wasReset=useRef(false);
-        useEffect(()=>{next()},[]);
-        function buildChoices(ans){const s=new Set([ans]),cand=[-3,-2,-1,1,2,3,4,5,6,7,8,9];while(s.size<4){const d=pick(cand);s.add(Math.max(1,ans+d*(Math.random()<0.5?1:-1)));}return Array.from(s).sort(()=>Math.random()-0.5);}
-        function next(){nextTimer.current=null;setInSession(true);const na=pick(avail),nb=pick([1,2,3,4,5,6,7,8,9]),ans=na*nb;setA(na);setB(nb);setChoices(buildChoices(ans));setQKey(k=>k+1);setPaused(false);setRunning(true);setView("practice");}
-        function choose(val){if(paused||!running)return;setRunning(false);const ms=qms,total=totalMs,ok=val===a*b;const r={id:`${Date.now()}-${Math.random().toString(36).slice(2,7)}`,a,b,picked:val,ok,ms,totalMs:total,t:Date.now()};
-          const rows=[r,...log];setLog(rows);save(rows);nextTimer.current=setTimeout(()=>next(),250);}
-        function toggleDan(n){if(all){setAll(false);setSel([n]);return;}setSel(p=>p.includes(n)?p.filter(x=>x!==n):[...p,n]);}
-        function resetOnLog(){cancelNext();try{localStorage.removeItem(LS)}catch{} setLog([]);save([]);setSessionKey(k=>k+1);setQKey(k=>k+1);setPaused(true);setRunning(false);setInSession(false);setView("log");wasReset.current=true;}
-        function doPause(){cancelNext();setPaused(true);setRunning(false);setView("log");}
-        function doResume(){if(wasReset.current){wasReset.current=false;next();return;}setPaused(false);setRunning(true);setView("practice");}
-        if(view==="log")return html`
-          <div class="w-full max-w-[720px] mx-auto p-2 sm:p-3 pb-[env(safe-area-inset-bottom)] space-y-3 select-none">
-            <div class="p-2 font-bold text-base sm:text-lg">九九ミニ（プレビュー）</div>
-            <div class="border rounded-2xl p-3 bg-white">
-              <div class="flex items-center justify-between flex-wrap gap-2">
-                <div class="font-semibold text-sm">休憩中（ログを確認できます）</div>
-                <div class="flex gap-2">
-                  <button onClick=${doResume} class="h-10 sm:h-11 px-3 rounded-xl border border-black hover:bg-black hover:text-white active:scale-95 text-sm sm:text-base">▶ 再開</button>
-                  <button onClick=${resetOnLog} class="h-10 sm:h-11 px-3 rounded-xl border border-rose-600 text-rose-700 hover:bg-rose-600 hover:text-white active:scale-95 text-sm sm:text-base">リセット</button>
-                </div>
-              </div>
-            </div>
-            <div class="border rounded-2xl p-3 bg-slate-50">
-              <div class="font-semibold mb-2 text-sm">ログ一覧（スクロールで全件確認）</div>
-              <div class="max-h-[66vh] overflow-auto">
-                <table class="w-full border-separate border-spacing-0 text-xs">
-                  <thead><tr><th class="text-left p-1 border-b">問題</th><th class="text-left p-1 border-b">選択</th><th class="text-left p-1 border-b">正誤</th><th class="text-left p-1 border-b">問題タイム</th><th class="text-left p-1 border-b">合計タイム</th></tr></thead>
-                  <tbody>
-                    ${log.length===0&&html`<tr><td colSpan="5" class="p-3 text-slate-500">まだ記録がありません。</td></tr>`}
-                    ${log.map(r=>html`<tr key=${r.id} class="border-b">
-                      <td class="p-1 border-b">${r.a}×${r.b}</td><td class="p-1 border-b">${r.picked}</td><td class="p-1 border-b">${r.ok?'○':'×'}</td>
-                      <td class="p-1 border-b tabular-nums">${fmt(r.ms)}</td><td class="p-1 border-b tabular-nums">${fmt(r.totalMs)}</td></tr>`)}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>`;
-        return html`
-          <div class="w-full max-w-[720px] mx-auto p-2 sm:p-3 pb-[env(safe-area-inset-bottom)] space-y-3 select-none">
-            <div class="p-2 font-bold text-base sm:text-lg">九九ミニ（プレビュー）</div>
-            <div class="border rounded-2xl p-3 sm:p-4 bg-slate-50 space-y-2">
-              <div class="font-semibold text-sm sm:text-base">出題範囲</div>
-              <div class="flex items-center gap-2 sm:gap-3">
-                <span class="text-sm sm:text-base">全段</span>
-                <button aria-pressed=${all} class=${`h-9 sm:h-10 px-3 rounded-full border ${all?'bg-black text-white border-black':'bg-white'} text-sm sm:text-base`} onClick=${()=>{setAll(true);setSel([]);}}>ON</button>
-                <button aria-pressed=${!all} class=${`h-9 sm:h-10 px-3 rounded-full border ${!all?'bg-black text-white border-black':'bg-white'} text-sm sm:text-base`} onClick=${()=>{setAll(false);}}>OFF</button>
-              </div>
-              <div class="text-xs sm:text-sm text-slate-600">（全段OFFで1〜9段をトグル。全段ON中に段を押すとカスタムに切替）</div>
-              <div class="grid grid-cols-5 gap-2">
-                ${[1,2,3,4,5,6,7,8,9].map(n=>html`<button onClick=${()=>{ if(all){setAll(false);setSel([n])} else { setSel(p=>p.includes(n)?p.filter(x=>x!==n):[...p,n]); } }} class=${`px-2 py-1.5 sm:px-3 sm:py-2 rounded-full border text-sm sm:text-base ${(sel.includes(n)&&!all)?'bg-black text-white border-black':'bg-white'}`}>${n}段</button>`)}
-              </div>
-            </div>
-            <div class="border rounded-2xl p-3 sm:p-4 bg-white space-y-3">
-              <div class="flex items-center justify-between">
-                <div class="font-bold text-xl sm:text-2xl">${a} × ${b} ＝</div>
-                <div class="text-right leading-tight"><div class="tabular-nums text-base sm:text-lg">${fmt(qms)}</div><div class="tabular-nums text-xs sm:text-sm text-slate-500">${fmt(totalMs)}</div></div>
-              </div>
-              <div class="grid grid-cols-2 gap-2 sm:gap-3">
-                ${choices.map(c=>html`<button disabled=${!running} onClick=${()=>choose(c)} class=${`h-12 sm:h-14 px-2 rounded-2xl border flex items-center justify-center text-lg sm:text-xl active:scale-95 transition-transform ${!running?'opacity-50 cursor-not-allowed':''}`}>${c}</button>`)}
-              </div>
-              <div class="grid grid-cols-2 gap-2 sm:gap-3">
-                <button onClick=${()=>{cancelNext();setPaused(true);setRunning(false);setView("log");}} class="h-11 sm:h-12 px-3 rounded-xl border border-black hover:bg-black hover:text-white active:scale-95 text-sm sm:text-base">⏸ 休憩</button>
-                <button onClick=${()=>{cancelNext();next();}} class="h-11 sm:h-12 px-3 rounded-xl border border-black hover:bg-black hover:text-white active:scale-95 text-sm sm:text-base">スキップ</button>
-              </div>
-            </div>
-            ${log[0]&&html`<div class=${`border rounded-xl p-3 ${log[0].ok?'bg-emerald-50':'bg-rose-50'}`}><div class="flex justify-between text-xs sm:text-sm"><div>${log[0].a}×${log[0].b} → あなた: <b>${log[0].picked}</b></div><div class="tabular-nums">合計 ${fmt(log[0].totalMs)}</div></div><div class="mt-1 text-xs sm:text-sm">結果: ${log[0].ok?'○ 正解':'× 不正解'} ／ 問題 ${fmt(log[0].ms)}</div></div>`}
-          </div>`;}
-      render(html`<${App}/>`,document.getElementById("app"));
-      if("serviceWorker"in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("/sw.js").catch(console.error);});}
+<!-- 画面にエラーを出すハンドラ（最上段に配置） -->
 <script>
   window.addEventListener('error', e => {
-    const p = document.createElement('pre');
-    p.textContent = 'Error: ' + (e.message || e.error);
-    p.style.cssText = 'white-space:pre-wrap;padding:8px;margin:8px;background:#fee;color:#900;border:1px solid #f99';
-    document.body.appendChild(p);
+    const box = document.createElement('pre');
+    box.style.cssText = 'white-space:pre-wrap;background:#fee;border:1px solid #f99;padding:12px;margin:12px;font:14px/1.5 ui-monospace,Menlo,monospace';
+    box.textContent = 'ERROR: ' + e.message + '\n' + (e.filename||'') + ':' + (e.lineno||'') + ':' + (e.colno||'');
+    document.body.appendChild(box);
   });
   window.addEventListener('unhandledrejection', e => {
-    const p = document.createElement('pre');
-    p.textContent = 'Promise Rejection: ' + (e.reason && (e.reason.stack || e.reason.message || e.reason));
-    p.style.cssText = 'white-space:pre-wrap;padding:8px;margin:8px;background:#eef;color:#004;border:1px solid #99f';
-    document.body.appendChild(p);
+    const box = document.createElement('pre');
+    box.style.cssText = 'white-space:pre-wrap;background:#ffe;border:1px solid #cc0;padding:12px;margin:12px;font:14px/1.5 ui-monospace,Menlo,monospace';
+    box.textContent = 'PROMISE: ' + (e.reason && (e.reason.stack || e.reason.message || String(e.reason)));
+    document.body.appendChild(box);
   });
 </script>
-    </script>
-  </body>
+</head>
+<body>
+<div style="padding:12px;background:#e8f5e9;border:1px solid #a5d6a7;margin:12px;border-radius:8px">
+  ✅ index.html は配信されています（この緑枠が見えればOK）。JSが動かない場合、下にエラーが出ます。
+</div>
+
+<div id="app"></div>
+
+<!-- UMD 版（相性問題を回避） -->
+<script src="https://unpkg.com/preact@10.22.0/dist/preact.umd.js"></script>
+<script src="https://unpkg.com/preact@10.22.0/hooks/dist/hooks.umd.js"></script>
+<script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
+
+<script>
+const { h, render } = window.preact;
+const { useEffect, useMemo, useRef, useState } = window.preactHooks;
+const html = window.htm.bind(h);
+
+const LS = "kuku_min_preview_v1";
+const fmt = (ms) => `${Math.floor(ms/1000)}.${String(ms%1000).padStart(3,'0')}s`;
+const pick = (a) => a[Math.floor(Math.random()*a.length)];
+function useStopwatch(run, resetKey=0){
+  const [ms,setMs]=useState(0); const acc=useRef(0),raf=useRef(null),start=useRef(null),prev=useRef(resetKey);
+  useEffect(()=>{const reset=prev.current!==resetKey;prev.current=resetKey;
+    if(raf.current){cancelAnimationFrame(raf.current);raf.current=null;}
+    if(reset){acc.current=0;setMs(0);}
+    if(!run){ if(start.current!=null){acc.current+=Math.round(performance.now()-start.current);start.current=null;} return ()=>{}; }
+    const t0=performance.now(),base=acc.current;start.current=t0;
+    const tick=()=>{setMs(base+Math.round(performance.now()-t0));raf.current=requestAnimationFrame(tick)};raf.current=requestAnimationFrame(tick);
+    return()=>{if(raf.current)cancelAnimationFrame(raf.current);if(start.current!=null){acc.current=base+Math.round(performance.now()-t0);start.current=null;}}
+  },[run,resetKey]); return ms;
+}
+
+function App(){
+  const [view,setView]=useState("practice"),[all,setAll]=useState(true),[sel,setSel]=useState([]);
+  const avail=useMemo(()=>all||sel.length===0?[1,2,3,4,5,6,7,8,9]:[...sel].sort((a,b)=>a-b),[all,sel]);
+  const [a,setA]=useState(1),[b,setB]=useState(1),[choices,setChoices]=useState([1,2,3,4]);
+  const [running,setRunning]=useState(false),[paused,setPaused]=useState(false),[qKey,setQKey]=useState(0),[inSession,setInSession]=useState(false),[sessionKey,setSessionKey]=useState(0);
+  const qms=useStopwatch(running&&!paused,qKey), totalMs=useStopwatch(inSession&&!paused,sessionKey);
+  const [log,setLog]=useState(()=>{try{const raw=localStorage.getItem(LS);return raw?JSON.parse(raw):[]}catch{return[]}});
+  const save=(rows)=>{try{localStorage.setItem(LS,JSON.stringify(rows.slice(0,5000)))}catch{}};
+  const nextTimer=useRef(null),cancelNext=()=>{if(nextTimer.current!=null){clearTimeout(nextTimer.current);nextTimer.current=null;}},wasReset=useRef(false);
+  useEffect(()=>{next()},[]);
+  function buildChoices(ans){const s=new Set([ans]),cand=[-3,-2,-1,1,2,3,4,5,6,7,8,9];while(s.size<4){const d=pick(cand);s.add(Math.max(1,ans+d*(Math.random()<0.5?1:-1)));}return Array.from(s).sort(()=>Math.random()-0.5);}
+  function next(){nextTimer.current=null;setInSession(true);const na=pick(avail),nb=pick([1,2,3,4,5,6,7,8,9]);setA(na);setB(nb);setChoices(buildChoices(na*nb));setQKey(k=>k+1);setPaused(false);setRunning(true);setView("practice");}
+  function choose(val){if(paused||!running)return;setRunning(false);const ms=qms,total=totalMs,ok=(val===a*b);
+    const r={id:`${Date.now()}-${Math.random().toString(36).slice(2,7)}`,a,b,picked:val,ok,ms,totalMs:total,t:Date.now()};
+    const rows=[r,...log];setLog(rows);save(rows);nextTimer.current=setTimeout(()=>next(),250);}
+  function toggleDan(n){if(all){setAll(false);setSel([n]);return;}setSel(p=>p.includes(n)?p.filter(x=>x!==n):[...p,n]);}
+  function doPause(){cancelNext();setPaused(true);setRunning(false);setView("log");}
+  function doResume(){if(wasReset.current){wasReset.current=false;next();return;}setPaused(false);setRunning(true);setView("practice");}
+  function resetOnLog(){cancelNext();try{localStorage.removeItem(LS)}catch{} setLog([]);save([]);setSessionKey(k=>k+1);setQKey(k=>k+1);setPaused(true);setRunning(false);setInSession(false);setView("log");wasReset.current=true;}
+
+  if(view==="log") return html`
+    <div class="w-full max-w-[720px] mx-auto p-2 sm:p-3 pb-[env(safe-area-inset-bottom)] space-y-3 select-none">
+      <div class="p-2 font-bold text-base sm:text-lg">九九ミニ（プレビュー）</div>
+      <div class="border rounded-2xl p-3 bg-white">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="font-semibold text-sm">休憩中（ログを確認できます）</div>
+          <div class="flex gap-2">
+            <button onClick=${doResume} class="h-10 sm:h-11 px-3 rounded-xl border border-black hover:bg-black hover:text-white active:scale-95 text-sm sm:text-base">▶ 再開</button>
+            <button onClick=${resetOnLog} class="h-10 sm:h-11 px-3 rounded-xl border border-rose-600 text-rose-700 hover:bg-rose-600 hover:text-white active:scale-95 text-sm sm:text-base">リセット</button>
+          </div>
+        </div>
+      </div>
+      <div class="border rounded-2xl p-3 bg-slate-50">
+        <div class="font-semibold mb-2 text-sm">ログ一覧（スクロールで全件確認）</div>
+        <div class="max-h-[66vh] overflow-auto">
+          <table class="w-full border-separate border-spacing-0 text-xs">
+            <thead><tr><th class="text-left p-1 border-b">問題</th><th class="text-left p-1 border-b">選択</th><th class="text-left p-1 border-b">正誤</th><th class="text-left p-1 border-b">問題タイム</th><th class="text-left p-1 border-b">合計タイム</th></tr></thead>
+            <tbody>
+              ${log.length===0&&html`<tr><td colSpan="5" class="p-3 text-slate-500">まだ記録がありません。</td></tr>`}
+              ${log.map(r=>html`<tr key=${r.id} class="border-b">
+                <td class="p-1 border-b">${r.a}×${r.b}</td><td class="p-1 border-b">${r.picked}</td><td class="p-1 border-b">${r.ok?'○':'×'}</td>
+                <td class="p-1 border-b tabular-nums">${fmt(r.ms)}</td><td class="p-1 border-b tabular-nums">${fmt(r.totalMs)}</td></tr>`)}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  return html`
+    <div class="w-full max-w-[720px] mx-auto p-2 sm:p-3 pb-[env(safe-area-inset-bottom)] space-y-3 select-none">
+      <div class="p-2 font-bold text-base sm:text-lg">九九ミニ（プレビュー）</div>
+      <div class="border rounded-2xl p-3 sm:p-4 bg-slate-50 space-y-2">
+        <div class="font-semibold text-sm sm:text-base">出題範囲</div>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <span class="text-sm sm:text-base">全段</span>
+          <button aria-pressed=${all} class=${`h-9 sm:h-10 px-3 rounded-full border ${all?'bg-black text-white border-black':'bg-white'} text-sm sm:text-base`} onClick=${()=>{setAll(true);setSel([]);}}>ON</button>
+          <button aria-pressed=${!all} class=${`h-9 sm:h-10 px-3 rounded-full border ${!all?'bg-black text-white border-black':'bg-white'} text-sm sm:text-base`} onClick=${()=>{setAll(false);}}>OFF</button>
+        </div>
+        <div class="text-xs sm:text-sm text-slate-600">（全段OFFで1〜9段をトグル。全段ON中に段を押すとカスタムに切替）</div>
+        <div class="grid grid-cols-5 gap-2">
+          ${[1,2,3,4,5,6,7,8,9].map(n=>html`<button onClick=${()=>{ if(all){setAll(false);setSel([n])} else { setSel(p=>p.includes(n)?p.filter(x=>x!==n):[...p,n]); } }} class=${`px-2 py-1.5 sm:px-3 sm:py-2 rounded-full border text-sm sm:text-base ${(sel.includes(n)&&!all)?'bg-black text-white border-black':'bg-white'}`}>${n}段</button>`)}
+        </div>
+      </div>
+      <div class="border rounded-2xl p-3 sm:p-4 bg-white space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="font-bold text-xl sm:text-2xl">${a} × ${b} ＝</div>
+          <div class="text-right leading-tight"><div class="tabular-nums text-base sm:text-lg">${fmt(qms)}</div><div class="tabular-nums text-xs sm:text-sm text-slate-500">${fmt(totalMs)}</div></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 sm:gap-3">
+          ${choices.map(c=>html`<button disabled=${!running} onClick=${()=>choose(c)} class=${`h-12 sm:h-14 px-2 rounded-2xl border flex items-center justify-center text-lg sm:text-xl active:scale-95 transition-transform ${!running?'opacity-50 cursor-not-allowed':''}`}>${c}</button>`)}
+        </div>
+        <div class="grid grid-cols-2 gap-2 sm:gap-3">
+          <button onClick=${doPause} class="h-11 sm:h-12 px-3 rounded-xl border border-black hover:bg-black hover:text-white active:scale-95 text-sm sm:text-base">⏸ 休憩</button>
+          <button onClick=${()=>{cancelNext();next();}} class="h-11 sm:h-12 px-3 rounded-xl border border-black hover:bg-black hover:text-white active:scale-95 text-sm sm:text-base">スキップ</button>
+        </div>
+      </div>
+    </div>`;
+}
+render(html`<${App}/>`, document.getElementById("app"));
+</script>
+
+<!-- SW登録：まずは“有効化”。もし白画面が続くなら、いったんコメントアウトして切り分け -->
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js").catch(console.error); });
+}
+</script>
+</body>
 </html>
