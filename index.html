@@ -14,10 +14,11 @@
   </head>
   <body>
     <div id="app"></div>
-    <script type="module">
-      import { h, render } from "https://unpkg.com/preact@10.22.0/dist/preact.module.js";
-      import { useEffect, useMemo, useRef, useState } from "https://unpkg.com/preact@10.22.0/hooks/dist/hooks.module.js";
-      import htm from "https://unpkg.com/htm@3.1.1/preact/index.module.js";
+  <script type="module" crossorigin>
+    import { h, render } from "https://esm.sh/preact@10.22.0";
+    import { useEffect, useMemo, useRef, useState } from "https://esm.sh/preact@10.22.0/hooks";
+    import htm from "https://esm.sh/htm@3.1.1/preact";
+
       const html=htm.bind(h);
       const LS="kuku_min_preview_v1";
       const fmt=(ms)=>`${Math.floor(ms/1000)}.${String(ms%1000).padStart(3,"0")}s`;
