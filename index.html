@@ -105,6 +105,20 @@
           </div>`;}
       render(html`<${App}/>`,document.getElementById("app"));
       if("serviceWorker"in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("/sw.js").catch(console.error);});}
+<script>
+  window.addEventListener('error', e => {
+    const p = document.createElement('pre');
+    p.textContent = 'Error: ' + (e.message || e.error);
+    p.style.cssText = 'white-space:pre-wrap;padding:8px;margin:8px;background:#fee;color:#900;border:1px solid #f99';
+    document.body.appendChild(p);
+  });
+  window.addEventListener('unhandledrejection', e => {
+    const p = document.createElement('pre');
+    p.textContent = 'Promise Rejection: ' + (e.reason && (e.reason.stack || e.reason.message || e.reason));
+    p.style.cssText = 'white-space:pre-wrap;padding:8px;margin:8px;background:#eef;color:#004;border:1px solid #99f';
+    document.body.appendChild(p);
+  });
+</script>
     </script>
   </body>
 </html>
